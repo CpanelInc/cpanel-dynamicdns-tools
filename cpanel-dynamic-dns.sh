@@ -71,7 +71,7 @@ setup_timeout ()
 {
    (sleep $TIMEOUT; kill -ALRM $PARENTPID) &
    ALARMPID=$!
-   trap exit_timeout SIGALRM
+   trap exit_timeout ALRM
 }
 
 setup_vars ()
