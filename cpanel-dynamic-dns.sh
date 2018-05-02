@@ -162,7 +162,7 @@ exit_if_last_address_is_current ()
 }
 
 generate_auth_string () {
-   AUTH_STRING=`echo -n "$CPANEL_USER:$CPANEL_PASS" | openssl enc -base64`
+   AUTH_STRING=`printf "%s:%s" "$CPANEL_USER" "$CPANEL_PASS" | openssl enc -base64`
 }
 
 fetch_zone () {
