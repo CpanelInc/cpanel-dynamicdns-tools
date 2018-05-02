@@ -92,7 +92,7 @@ setup_vars ()
 setup_config_vars ()
 {
 
-   if [ "$SUBDOMAIN" == "" ]; then
+   if [ "$SUBDOMAIN" = "" ]; then
       APINAME="$DOMAIN."
    else
       APINAME="$SUBDOMAIN"
@@ -139,7 +139,7 @@ fetch_myaddress ()
       echo -n $MYADDRESS
       echo "...Done"
    fi
-   if [ "$MYADDRESS" == "" ]; then
+   if [ "$MYADDRESS" = "" ]; then
       if [ "$QUIET" != "1" ]; then
          echo "Failed to determine IP Address (via https://www.cpanel.net/myip/)"
       fi
@@ -157,7 +157,7 @@ load_last_run ()
 
 exit_if_last_address_is_current ()
 {
-   if [ "$LAST_ADDRESS" == "$MYADDRESS" ]; then
+   if [ "$LAST_ADDRESS" = "$MYADDRESS" ]; then
       if [ "$QUIET" != "1" ]; then
          echo "Last update was for $LAST_ADDRESS, and address has not changed."
          echo "If you want to force an update, remove $LAST_RUN_FILE"
@@ -185,13 +185,13 @@ fetch_zone () {
    check_results_for_error "$REQUEST_RESULTS" "$REQUEST"
    for LINE in $REQUEST_RESULTS
    do
-      if [ "$LINE" == "<record>" ]; then
+      if [ "$LINE" = "<record>" ]; then
          INRECORD=1
          continue
       fi
-      if [ "$LINE" == "</record>" ]; then
+      if [ "$LINE" = "</record>" ]; then
          INRECORD=0
-         if [ "$USETHISRECORD" == "2" ]; then
+         if [ "$USETHISRECORD" = "2" ]; then
             LINENUM=`echo -e "$RECORD" | grep '<Line>' | awk -F'<' '{print \$2}' | awk -F'>' '{print \$2}'`
             ADDRESS=`echo -e "$RECORD" | grep -i '<address>' | awk -F'<' '{print \$2}' | awk -F'>' '{print \$2}'`
             LINES="$LINES\n$LINENUM=$ADDRESS"
@@ -200,13 +200,13 @@ fetch_zone () {
          RECORD=""
          continue
       fi
-      if [ "$LINE" == "<type>A</type>" ]; then
+      if [ "$LINE" = "<type>A</type>" ]; then
          USETHISRECORD=`expr $USETHISRECORD + 1`
       fi
-      if [ "$LINE" == "<name>$SUBDOMAIN$DOMAIN.</name>" ]; then
+      if [ "$LINE" = "<name>$SUBDOMAIN$DOMAIN.</name>" ]; then
          USETHISRECORD=`expr $USETHISRECORD + 1`
       fi
-      if [ "$INRECORD" == "1" ]; then
+      if [ "$INRECORD" = "1" ]; then
          RECORD="$RECORD\n$LINE"
       fi
    done
@@ -225,10 +225,10 @@ parse_zone () {
    DUPECOUNT=0
    for LINE in `echo -e $LINES`
    do
-      if [ "$LINE" == "" ]; then
+      if [ "$LINE" = "" ]; then
          continue
       fi
-      if [ "$FIRSTLINE" == "" ]; then
+      if [ "$FIRSTLINE" = "" ]; then
          FIRSTLINE=$LINE
          continue
       fi
@@ -242,7 +242,7 @@ parse_zone () {
    fi
    for LINE in `echo -e $REVERSELINES`
    do
-      if [ "$LINE" == "" ]; then
+      if [ "$LINE" = "" ]; then
          continue
       fi
       LINENUM=`echo $LINE | awk -F= '{print $1}'`
@@ -261,7 +261,7 @@ parse_zone () {
 
 update_records () {
 
-   if [ "$FIRSTLINE" == "" ]; then
+   if [ "$FIRSTLINE" = "" ]; then
       if [ "$QUIET" != "1" ]; then
          echo "Record $SUBDOMAIN$DOMAIN. does not exist.  Setting $SUBDOMAIN$DOMAIN. to $MYADDRESS"
       fi
@@ -273,7 +273,7 @@ update_records () {
       ADDRESS=`echo $FIRSTLINE | awk -F= '{print $2}'`
       LINENUM=`echo $FIRSTLINE | awk -F= '{print $1}'`
 
-      if [ "$ADDRESS" == "$MYADDRESS" ]; then
+      if [ "$ADDRESS" = "$MYADDRESS" ]; then
          if [ "$QUIET" != "1" ]; then
             echo "Record $SUBDOMAIN$DOMAIN. already exists in zone on line $LINENUM of the $DOMAIN zone."
             echo "Not updating as its already set to $ADDRESS"
@@ -345,18 +345,18 @@ check_results_for_error ()
             STATUSMSG="$STATUSMSG $MSGADD"
             continue
          fi
-         if [ "$INREASON" == "1" ]; then
+         if [ "$INREASON" = "1" ]; then
             MSG="$MSG $LINE"
          fi
-         if [ "$INSTATUSMSG" == "1" ]; then
+         if [ "$INSTATUSMSG" = "1" ]; then
             STATUSMSG="$STATUSMSG $LINE"
          fi
 
       done
 
-      if [ "$MSG" == "" ]; then
+      if [ "$MSG" = "" ]; then
          MSG="Unknown Error"
-         if [ "$STATUSMSG" == "" ]; then
+         if [ "$STATUSMSG" = "" ]; then
             STATUSMSG="Please make sure you have the zoneedit, or simplezone edit permission on your account."
          fi
       fi
@@ -380,7 +380,7 @@ notify_failure ()
    fi
    TIME_DIFF=`expr $CURRENT_TIME - $LAST_TIME`
 
-   if [ "$CONTACT_EMAIL" == "" ]; then
+   if [ "$CONTACT_EMAIL" = "" ]; then
       echo "No contact email address was set.  Cannot send failure notification."
       return
    fi
@@ -414,10 +414,10 @@ terminate () {
 }
 
 check_for_root () {
-   if [ "$PERMIT_ROOT_EXECUTION" == "1" ]; then
+   if [ "$PERMIT_ROOT_EXECUTION" = "1" ]; then
       return
    fi
-   if [ "`id -u`" == "0" ]; then
+   if [ "`id -u`" = "0" ]; then
       echo "You should not run this script as root if possible"
       echo "If you really want to run as root please run"
       echo "echo \"PERMIT_ROOT_EXECUTION=1\" >> /etc/$BASEDIR.conf"
@@ -427,22 +427,22 @@ check_for_root () {
 }
 
 check_config () {
-   if [ "$CONTACT_EMAIL" == "" ]; then
+   if [ "$CONTACT_EMAIL" = "" ]; then
       echo "= Warning: no email address set for notifications"
    fi
-   if [ "$CPANEL_SERVER" == "" ]; then
+   if [ "$CPANEL_SERVER" = "" ]; then
       echo "= Error: CPANEL_SERVER must be set in a configuration file"
       exit
    fi
-   if [ "$DOMAIN" == "" ]; then
+   if [ "$DOMAIN" = "" ]; then
       echo "= Error: DOMAIN must be set in a configuration file"
       exit
    fi
-   if [ "$CPANEL_USER" == "" ]; then
+   if [ "$CPANEL_USER" = "" ]; then
       echo "= Error: CPANEL_USER must be set in a configuration file"
       exit
    fi
-   if [ "$CPANEL_PASS" == "" ]; then
+   if [ "$CPANEL_PASS" = "" ]; then
       echo "= Error: CPANEL_PASS must be set in a configuration file"
       exit
    fi
