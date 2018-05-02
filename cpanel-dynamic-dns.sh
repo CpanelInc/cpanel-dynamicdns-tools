@@ -60,9 +60,7 @@ banner ()
 exit_timeout ()
 {
    ALARMPID=""
-   if [ "$QUIET" != "1" ]; then
-      echo "The operation timed out while connecting to $LAST_CONNECT_HOST"
-   fi
+   say "The operation timed out while connecting to %s\n" "$LAST_CONNECT_HOST"
    notify_failure "Timeout" "Connection Timeout" "Timeout while connecting to $LAST_CONNECT_HOST"
    exit
 }
@@ -128,21 +126,20 @@ create_dirs ()
    fi
 }
 
+say ()
+{
+    [ "$QUIET" = "1" ] && return
+    printf "$@"
+}
+
 fetch_myaddress ()
 {
-   if [ "$QUIET" != "1" ]; then
-      echo -n "Determining IP Address..."
-   fi
+   say "Determining IP Address..."
    LAST_CONNECT_HOST="myip.cpanel.net"
    MYADDRESS=`printf "GET /v1.0/ HTTP/1.0\r\nHost: myip.cpanel.net\r\nConnection: close\r\n\r\n" | openssl s_client -quiet -connect myip.cpanel.net:443 2>/dev/null | tail -1`
-   if [ "$QUIET" != "1" ]; then
-      echo -n $MYADDRESS
-      echo "...Done"
-   fi
+   say "%s...Done\n" "$MYADDRESS"
    if [ "$MYADDRESS" = "" ]; then
-      if [ "$QUIET" != "1" ]; then
-         echo "Failed to determine IP Address (via https://www.cpanel.net/myip/)"
-      fi
+      say "Failed to determine IP Address (via https://www.cpanel.net/myip/)\n"
       terminate
    fi
    return
@@ -158,10 +155,8 @@ load_last_run ()
 exit_if_last_address_is_current ()
 {
    if [ "$LAST_ADDRESS" = "$MYADDRESS" ]; then
-      if [ "$QUIET" != "1" ]; then
-         echo "Last update was for $LAST_ADDRESS, and address has not changed."
-         echo "If you want to force an update, remove $LAST_RUN_FILE"
-      fi
+      say "Last update was for %s, and address has not changed.\n" "$LAST_ADDRESS"
+      say "If you want to force an update, remove %s\n" "$LAST_RUN_FILE"
       terminate
    fi
 }
@@ -171,9 +166,7 @@ generate_auth_string () {
 }
 
 fetch_zone () {
-   if [ "$QUIET" != "1" ]; then
-      echo -n "Fetching zone for $DOMAIN...."
-   fi
+   say "Fetching zone for %s...." "$DOMAIN"
    LAST_CONNECT_HOST=$CPANEL_SERVER
    REQUEST="GET /xml-api/cpanel?cpanel_xmlapi_module=ZoneEdit&cpanel_xmlapi_func=fetchzone&cpanel_xmlapi_apiversion=2&domain=$DOMAIN HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns.sh $VERSION\r\n\r\n\r\n"
    RECORD=""
@@ -211,15 +204,11 @@ fetch_zone () {
       fi
    done
 
-   if [ "$QUIET" != "1" ]; then
-      echo "Done"
-   fi
+   say "Done\n"
 }
 
 parse_zone () {
-   if [ "$QUIET" != "1" ]; then
-      echo -n "Looking for duplicate entries..."
-   fi
+   say "Looking for duplicate entries..."
    FIRSTLINE=""
    REVERSELINES=""
    DUPECOUNT=0
@@ -237,9 +226,7 @@ parse_zone () {
       REVERSELINES="$LINE\n$REVERSELINES"
    done
 
-   if [ "$QUIET" != "1" ]; then
-      echo "Found $DUPECOUNT duplicates"
-   fi
+   say "Found %d duplicates\n" "$DUPECOUNT"
    for LINE in `printf "$REVERSELINES"`
    do
       if [ "$LINE" = "" ]; then
@@ -248,23 +235,17 @@ parse_zone () {
       LINENUM=`echo $LINE | awk -F= '{print $1}'`
       LAST_CONNECT_HOST=$CPANEL_SERVER
       REQUEST="GET /xml-api/cpanel?cpanel_xmlapi_module=ZoneEdit&cpanel_xmlapi_func=remove_zone_record&cpanel_xmlapi_apiversion=2&domain=$DOMAIN&line=$LINENUM HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns.sh $VERSION\r\n\r\n\r\n"
-      if [ "$QUIET" != "1" ]; then
-         echo "Removing Duplicate entry for $SUBDOMAIN$DOMAIN. (line $LINENUM)"
-      fi
+      say "Removing Duplicate entry for %s%s. (line %d)\n" "$SUBDOMAIN" "$DOMAIN" "$LINENUM"
       RESULT=`printf "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>&1`
       check_results_for_error "$RESULT" "$REQUEST"
-      if [ "$QUIET" != "1" ]; then
-         echo $RESULT
-      fi
+      say "%s\n" "$RESULT"
    done
 }
 
 update_records () {
 
    if [ "$FIRSTLINE" = "" ]; then
-      if [ "$QUIET" != "1" ]; then
-         echo "Record $SUBDOMAIN$DOMAIN. does not exist.  Setting $SUBDOMAIN$DOMAIN. to $MYADDRESS"
-      fi
+      say "Record %s%s. does not exist.  Setting %s%s. to %s\n" "$SUBDOMAIN" "$DOMAIN" "$SUBDOMAIN" "$DOMAIN" "$MYADDRESS"
       LAST_CONNECT_HOST=$CPANEL_SERVER
       REQUEST="GET /xml-api/cpanel?cpanel_xmlapi_module=ZoneEdit&cpanel_xmlapi_func=add_zone_record&cpanel_xmlapi_apiversion=2&domain=$DOMAIN&name=$APINAME&type=A&address=$MYADDRESS&ttl=300 HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns.sh $VERSION\r\n\r\n\r\n"
       RESULT=`printf "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>&1`
@@ -274,16 +255,12 @@ update_records () {
       LINENUM=`echo $FIRSTLINE | awk -F= '{print $1}'`
 
       if [ "$ADDRESS" = "$MYADDRESS" ]; then
-         if [ "$QUIET" != "1" ]; then
-            echo "Record $SUBDOMAIN$DOMAIN. already exists in zone on line $LINENUM of the $DOMAIN zone."
-            echo "Not updating as its already set to $ADDRESS"
-            echo "LAST_ADDRESS=\"$MYADDRESS\"" > $LAST_RUN_FILE
-         fi
+         say "Record %s%s. already exists in zone on line %s of the %s zone.\n" "$SUBDOMAIN" "$DOMAIN" "$LINENUM" "$DOMAIN"
+         say "Not updating as its already set to %s\n" "$ADDRESS"
+         echo "LAST_ADDRESS=\"$MYADDRESS\"" > $LAST_RUN_FILE
          terminate
       fi
-      if [ "$QUIET" != "1" ]; then
-         echo "Record $SUBDOMAIN$DOMAIN. already exists in zone on line $LINENUM with address $ADDRESS.   Updating to $MYADDRESS"
-      fi
+      say "Record %s%s. already exists in zone on line %d with address %s.   Updating to %s\n" "$SUBDOMAIN" "$DOMAIN" "$LINENUM" "$ADDRESS" "$MYADDRESS"
       LAST_CONNECT_HOST=$CPANEL_SERVER
       REQUEST="GET /xml-api/cpanel?cpanel_xmlapi_module=ZoneEdit&cpanel_xmlapi_func=edit_zone_record&cpanel_xmlapi_apiversion=2&Line=$FIRSTLINE&domain=$DOMAIN&name=$APINAME&type=A&address=$MYADDRESS&ttl=300 HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns.sh $VERSION\r\n\r\n\r\n"
       RESULT=`printf "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>&1`
@@ -292,15 +269,11 @@ update_records () {
 
 
    if [ "`echo $RESULT | grep newserial`" ]; then
-      if [ "$QUIET" != "1" ]; then
-         echo "Record updated ok"
-      fi
+      say "Record updated ok\n"
       echo "LAST_ADDRESS=\"$MYADDRESS\""  > $LAST_RUN_FILE
    else
-      if [ "$QUIET" != "1" ]; then
-         echo "Failed to update record"
-         echo $RESULT
-      fi
+      say "Failed to update record\n"
+      say "%s\n" "$RESULT"
    fi
 
 }
@@ -310,9 +283,7 @@ check_results_for_error ()
    REQUEST_RESULTS="$1"
    REQUEST="$2"
    if [ "`echo $REQUEST_RESULTS | grep '<status>1</status>'`" ]; then
-      if [ "$QUIET" != "1" ]; then
-         echo -n "success..."
-      fi
+       say "success..."
    else
       INREASON=0
       INSTATUSMSG=0
@@ -360,9 +331,7 @@ check_results_for_error ()
             STATUSMSG="Please make sure you have the zoneedit, or simplezone edit permission on your account."
          fi
       fi
-      if [ "$QUIET" != "1" ]; then
-         echo "Request failed with error: $MSG ($STATUSMSG)"
-      fi
+      say "Request failed with error: %s (%s)\n" "$MSG" "$STATUSMSG"
       notify_failure "$MSG" "$STATUSMSG" "$REQUEST_RESULTS" "$REQUEST"
       terminate
    fi
@@ -390,19 +359,13 @@ notify_failure ()
 
       SUBJECT="Failed to update dynamic DNS for $SUBDOMAIN$DOMAIN. on $CPANEL_SERVER : $MSG ($STATUMSG)"
       if [ -e "/bin/mail" ]; then
-         if [ "$QUIET" != "1" ]; then
-            echo "sending email notification of failure."
-         fi
+         say "sending email notification of failure.\n"
          printf "Status Message: $STATUSMSG\nThe full response was: $REQUEST_RESULTS" | /bin/mail -s "$SUBJECT" $CONTACT_EMAIL
       else
-         if [ "$QUIET" != "1" ]; then
-            echo "/bin/mail is not available, cannot send notification of failure."
-         fi
+         say "/bin/mail is not available, cannot send notification of failure.\n"
       fi
    else
-      if [ "$QUIET" != "1" ]; then
-         echo "skipping notification because a notication was sent $TIME_DIFF seconds ago."
-      fi
+      say "skipping notification because a notication was sent %d seconds ago.\n" "$TIME_DIFF"
    fi
 }
 
