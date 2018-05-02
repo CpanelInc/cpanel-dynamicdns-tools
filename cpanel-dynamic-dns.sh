@@ -76,7 +76,7 @@ setup_timeout ()
 
 setup_vars ()
 {
-   
+
    VERSION="2.1"
    APINAME=""
    PARENTPID=$$
@@ -181,7 +181,7 @@ fetch_zone () {
    INRECORD=0
    USETHISRECORD=0
    REQUEST_RESULTS=`echo -e "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>/dev/null`
-   
+
    check_results_for_error "$REQUEST_RESULTS" "$REQUEST"
    for LINE in $REQUEST_RESULTS
    do
@@ -210,7 +210,7 @@ fetch_zone () {
          RECORD="$RECORD\n$LINE"
       fi
    done
-   
+
    if [ "$QUIET" != "1" ]; then
       echo "Done"
    fi
@@ -232,11 +232,11 @@ parse_zone () {
          FIRSTLINE=$LINE
          continue
       fi
-      
+
       DUPECOUNT=`expr $DUPECOUNT + 1`
       REVERSELINES="$LINE\n$REVERSELINES"
    done
-   
+
    if [ "$QUIET" != "1" ]; then
       echo "Found $DUPECOUNT duplicates"
    fi
@@ -260,7 +260,7 @@ parse_zone () {
 }
 
 update_records () {
-   
+
    if [ "$FIRSTLINE" == "" ]; then
       if [ "$QUIET" != "1" ]; then
          echo "Record $SUBDOMAIN$DOMAIN. does not exist.  Setting $SUBDOMAIN$DOMAIN. to $MYADDRESS"
@@ -272,7 +272,7 @@ update_records () {
    else
       ADDRESS=`echo $FIRSTLINE | awk -F= '{print $2}'`
       LINENUM=`echo $FIRSTLINE | awk -F= '{print $1}'`
-      
+
       if [ "$ADDRESS" == "$MYADDRESS" ]; then
          if [ "$QUIET" != "1" ]; then
             echo "Record $SUBDOMAIN$DOMAIN. already exists in zone on line $LINENUM of the $DOMAIN zone."
@@ -289,8 +289,8 @@ update_records () {
       RESULT=`echo -e "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>&1`
       check_results_for_error "$RESULT" "$REQUEST"
    fi
-   
-   
+
+
    if [ "`echo $RESULT | grep newserial`" ]; then
       if [ "$QUIET" != "1" ]; then
          echo "Record updated ok"
@@ -302,7 +302,7 @@ update_records () {
          echo $RESULT
       fi
    fi
-   
+
 }
 
 check_results_for_error ()
@@ -318,7 +318,7 @@ check_results_for_error ()
       INSTATUSMSG=0
       MSG=""
       STATUSMSG=""
-      
+
       for LINE in $REQUEST_RESULTS
       do
          if [ "`echo $LINE | grep '<reason>'`" != "" ]; then
@@ -351,9 +351,9 @@ check_results_for_error ()
          if [ "$INSTATUSMSG" == "1" ]; then
             STATUSMSG="$STATUSMSG $LINE"
          fi
-         
+
       done
-      
+
       if [ "$MSG" == "" ]; then
          MSG="Unknown Error"
          if [ "$STATUSMSG" == "" ]; then
@@ -379,15 +379,15 @@ notify_failure ()
       . $LAST_FAIL_FILE
    fi
    TIME_DIFF=`expr $CURRENT_TIME - $LAST_TIME`
-   
+
    if [ "$CONTACT_EMAIL" == "" ]; then
       echo "No contact email address was set.  Cannot send failure notification."
       return
    fi
-   
+
    if [ $TIME_DIFF -gt $FAILURE_NOTIFY_INTERVAL ]; then
       echo "LAST_TIME=$CURRENT_TIME" > $LAST_FAIL_FILE
-      
+
       SUBJECT="Failed to update dynamic DNS for $SUBDOMAIN$DOMAIN. on $CPANEL_SERVER : $MSG ($STATUMSG)"
       if [ -e "/bin/mail" ]; then
          if [ "$QUIET" != "1" ]; then
