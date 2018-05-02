@@ -45,85 +45,85 @@ QUIET=""
 # Program starts here
 banner ()
 {
-   if [ "$QUIET" != "1" ]; then
-      echo "=="
-      echo "== cPanel Dyanmic DNS Updater $VERSION"
-      echo "=="
-      echo "==  Updating domain $SUBDOMAIN$DOMAIN"
-      echo "=="
-      echo $CFGMESSAGE1
-      echo $CFGMESSAGE2
-      echo "=="
-   fi
+    if [ "$QUIET" != "1" ]; then
+        echo "=="
+        echo "== cPanel Dyanmic DNS Updater $VERSION"
+        echo "=="
+        echo "==  Updating domain $SUBDOMAIN$DOMAIN"
+        echo "=="
+        echo $CFGMESSAGE1
+        echo $CFGMESSAGE2
+        echo "=="
+    fi
 }
 
 exit_timeout ()
 {
-   ALARMPID=""
-   say "The operation timed out while connecting to %s\n" "$LAST_CONNECT_HOST"
-   notify_failure "Timeout" "Connection Timeout" "Timeout while connecting to $LAST_CONNECT_HOST"
-   exit
+    ALARMPID=""
+    say "The operation timed out while connecting to %s\n" "$LAST_CONNECT_HOST"
+    notify_failure "Timeout" "Connection Timeout" "Timeout while connecting to $LAST_CONNECT_HOST"
+    exit
 }
 
 setup_timeout ()
 {
-   (sleep $TIMEOUT; kill -ALRM $PARENTPID) &
-   ALARMPID=$!
-   trap exit_timeout ALRM
+    (sleep $TIMEOUT; kill -ALRM $PARENTPID) &
+    ALARMPID=$!
+    trap exit_timeout ALRM
 }
 
 setup_vars ()
 {
 
-   VERSION="2.1"
-   APINAME=""
-   PARENTPID=$$
-   HOMEDIR=`echo ~`
-   LAST_CONNECT_HOST=""
-   FAILURE_NOTIFY_INTERVAL="14400"
-   PERMIT_ROOT_EXECUTION="0"
-   NOTIFY_FAILURE="1"
-   TIMEOUT="120"
-   BASEDIR="cpdyndns"
+    VERSION="2.1"
+    APINAME=""
+    PARENTPID=$$
+    HOMEDIR=`echo ~`
+    LAST_CONNECT_HOST=""
+    FAILURE_NOTIFY_INTERVAL="14400"
+    PERMIT_ROOT_EXECUTION="0"
+    NOTIFY_FAILURE="1"
+    TIMEOUT="120"
+    BASEDIR="cpdyndns"
 }
 
 setup_config_vars ()
 {
 
-   if [ "$SUBDOMAIN" = "" ]; then
-      APINAME="$DOMAIN."
-   else
-      APINAME="$SUBDOMAIN"
-      SUBDOMAIN="$SUBDOMAIN."
-   fi
-   LAST_RUN_FILE="$HOMEDIR/.$BASEDIR/$SUBDOMAIN$DOMAIN.lastrun"
-   LAST_FAIL_FILE="$HOMEDIR/.$BASEDIR/$SUBDOMAIN$DOMAIN.lastfail"
+    if [ "$SUBDOMAIN" = "" ]; then
+        APINAME="$DOMAIN."
+    else
+        APINAME="$SUBDOMAIN"
+        SUBDOMAIN="$SUBDOMAIN."
+    fi
+    LAST_RUN_FILE="$HOMEDIR/.$BASEDIR/$SUBDOMAIN$DOMAIN.lastrun"
+    LAST_FAIL_FILE="$HOMEDIR/.$BASEDIR/$SUBDOMAIN$DOMAIN.lastfail"
 }
 
 load_config ()
 {
-   if [ -e "/etc/$BASEDIR.conf" ]; then
-      chmod 0600 /etc/$BASEDIR.conf
-      . /etc/$BASEDIR.conf
-      CFGMESSAGE1="== /etc/$BASEDIR.conf is being used for configuration"
-   else
-      CFGMESSAGE1="== /etc/$BASEDIR.conf does not exist"
-   fi
-   if [ -e "$HOMEDIR/etc/$BASEDIR.conf" ]; then
-      chmod 0600 $HOMEDIR/etc/$BASEDIR.conf
-      . $HOMEDIR/etc/$BASEDIR.conf
-      CFGMESSAGE2="== $HOMEDIR/etc/$BASEDIR.conf is being used for configuration"
-   else
-      CFGMESSAGE2="== $HOMEDIR/etc/$BASEDIR.conf does not exist"
-   fi
+    if [ -e "/etc/$BASEDIR.conf" ]; then
+        chmod 0600 /etc/$BASEDIR.conf
+        . /etc/$BASEDIR.conf
+        CFGMESSAGE1="== /etc/$BASEDIR.conf is being used for configuration"
+    else
+        CFGMESSAGE1="== /etc/$BASEDIR.conf does not exist"
+    fi
+    if [ -e "$HOMEDIR/etc/$BASEDIR.conf" ]; then
+        chmod 0600 $HOMEDIR/etc/$BASEDIR.conf
+        . $HOMEDIR/etc/$BASEDIR.conf
+        CFGMESSAGE2="== $HOMEDIR/etc/$BASEDIR.conf is being used for configuration"
+    else
+        CFGMESSAGE2="== $HOMEDIR/etc/$BASEDIR.conf does not exist"
+    fi
 }
 
 create_dirs ()
 {
-   if [ ! -e "$HOMEDIR/.$BASEDIR" ]; then
-      mkdir -p "$HOMEDIR/.$BASEDIR"
-      chmod 0700 "$HOMEDIR/.$BASEDIR"
-   fi
+    if [ ! -e "$HOMEDIR/.$BASEDIR" ]; then
+        mkdir -p "$HOMEDIR/.$BASEDIR"
+        chmod 0700 "$HOMEDIR/.$BASEDIR"
+    fi
 }
 
 say ()
@@ -134,281 +134,281 @@ say ()
 
 fetch_myaddress ()
 {
-   say "Determining IP Address..."
-   LAST_CONNECT_HOST="myip.cpanel.net"
-   MYADDRESS=`printf "GET /v1.0/ HTTP/1.0\r\nHost: myip.cpanel.net\r\nConnection: close\r\n\r\n" | openssl s_client -quiet -connect myip.cpanel.net:443 2>/dev/null | tail -1`
-   say "%s...Done\n" "$MYADDRESS"
-   if [ "$MYADDRESS" = "" ]; then
-      say "Failed to determine IP Address (via https://www.cpanel.net/myip/)\n"
-      terminate
-   fi
-   return
+    say "Determining IP Address..."
+    LAST_CONNECT_HOST="myip.cpanel.net"
+    MYADDRESS=`printf "GET /v1.0/ HTTP/1.0\r\nHost: myip.cpanel.net\r\nConnection: close\r\n\r\n" | openssl s_client -quiet -connect myip.cpanel.net:443 2>/dev/null | tail -1`
+    say "%s...Done\n" "$MYADDRESS"
+    if [ "$MYADDRESS" = "" ]; then
+        say "Failed to determine IP Address (via https://www.cpanel.net/myip/)\n"
+        terminate
+    fi
+    return
 }
 
 load_last_run ()
 {
-   if [ -e "$LAST_RUN_FILE" ]; then
-      . $LAST_RUN_FILE
-   fi
+    if [ -e "$LAST_RUN_FILE" ]; then
+        . $LAST_RUN_FILE
+    fi
 }
 
 exit_if_last_address_is_current ()
 {
-   if [ "$LAST_ADDRESS" = "$MYADDRESS" ]; then
-      say "Last update was for %s, and address has not changed.\n" "$LAST_ADDRESS"
-      say "If you want to force an update, remove %s\n" "$LAST_RUN_FILE"
-      terminate
-   fi
+    if [ "$LAST_ADDRESS" = "$MYADDRESS" ]; then
+        say "Last update was for %s, and address has not changed.\n" "$LAST_ADDRESS"
+        say "If you want to force an update, remove %s\n" "$LAST_RUN_FILE"
+        terminate
+    fi
 }
 
 generate_auth_string () {
-   AUTH_STRING=`printf "%s:%s" "$CPANEL_USER" "$CPANEL_PASS" | openssl enc -base64`
+    AUTH_STRING=`printf "%s:%s" "$CPANEL_USER" "$CPANEL_PASS" | openssl enc -base64`
 }
 
 fetch_zone () {
-   say "Fetching zone for %s...." "$DOMAIN"
-   LAST_CONNECT_HOST=$CPANEL_SERVER
-   REQUEST="GET /xml-api/cpanel?cpanel_xmlapi_module=ZoneEdit&cpanel_xmlapi_func=fetchzone&cpanel_xmlapi_apiversion=2&domain=$DOMAIN HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns.sh $VERSION\r\n\r\n\r\n"
-   RECORD=""
-   LINES=""
-   INRECORD=0
-   USETHISRECORD=0
-   REQUEST_RESULTS=`printf "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>/dev/null`
+    say "Fetching zone for %s...." "$DOMAIN"
+    LAST_CONNECT_HOST=$CPANEL_SERVER
+    REQUEST="GET /xml-api/cpanel?cpanel_xmlapi_module=ZoneEdit&cpanel_xmlapi_func=fetchzone&cpanel_xmlapi_apiversion=2&domain=$DOMAIN HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns.sh $VERSION\r\n\r\n\r\n"
+    RECORD=""
+    LINES=""
+    INRECORD=0
+    USETHISRECORD=0
+    REQUEST_RESULTS=`printf "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>/dev/null`
 
-   check_results_for_error "$REQUEST_RESULTS" "$REQUEST"
-   for LINE in $REQUEST_RESULTS
-   do
-      if [ "$LINE" = "<record>" ]; then
-         INRECORD=1
-         continue
-      fi
-      if [ "$LINE" = "</record>" ]; then
-         INRECORD=0
-         if [ "$USETHISRECORD" = "2" ]; then
-            LINENUM=`printf "$RECORD" | grep '<Line>' | awk -F'<' '{print \$2}' | awk -F'>' '{print \$2}'`
-            ADDRESS=`printf "$RECORD" | grep -i '<address>' | awk -F'<' '{print \$2}' | awk -F'>' '{print \$2}'`
-            LINES="$LINES\n$LINENUM=$ADDRESS"
-         fi
-         USETHISRECORD=0
-         RECORD=""
-         continue
-      fi
-      if [ "$LINE" = "<type>A</type>" ]; then
-         USETHISRECORD=`expr $USETHISRECORD + 1`
-      fi
-      if [ "$LINE" = "<name>$SUBDOMAIN$DOMAIN.</name>" ]; then
-         USETHISRECORD=`expr $USETHISRECORD + 1`
-      fi
-      if [ "$INRECORD" = "1" ]; then
-         RECORD="$RECORD\n$LINE"
-      fi
-   done
+    check_results_for_error "$REQUEST_RESULTS" "$REQUEST"
+    for LINE in $REQUEST_RESULTS
+    do
+        if [ "$LINE" = "<record>" ]; then
+            INRECORD=1
+            continue
+        fi
+        if [ "$LINE" = "</record>" ]; then
+            INRECORD=0
+            if [ "$USETHISRECORD" = "2" ]; then
+                LINENUM=`printf "$RECORD" | grep '<Line>' | awk -F'<' '{print \$2}' | awk -F'>' '{print \$2}'`
+                ADDRESS=`printf "$RECORD" | grep -i '<address>' | awk -F'<' '{print \$2}' | awk -F'>' '{print \$2}'`
+                LINES="$LINES\n$LINENUM=$ADDRESS"
+            fi
+            USETHISRECORD=0
+            RECORD=""
+            continue
+        fi
+        if [ "$LINE" = "<type>A</type>" ]; then
+            USETHISRECORD=`expr $USETHISRECORD + 1`
+        fi
+        if [ "$LINE" = "<name>$SUBDOMAIN$DOMAIN.</name>" ]; then
+            USETHISRECORD=`expr $USETHISRECORD + 1`
+        fi
+        if [ "$INRECORD" = "1" ]; then
+            RECORD="$RECORD\n$LINE"
+        fi
+    done
 
-   say "Done\n"
+    say "Done\n"
 }
 
 parse_zone () {
-   say "Looking for duplicate entries..."
-   FIRSTLINE=""
-   REVERSELINES=""
-   DUPECOUNT=0
-   for LINE in `printf "$LINES"`
-   do
-      if [ "$LINE" = "" ]; then
-         continue
-      fi
-      if [ "$FIRSTLINE" = "" ]; then
-         FIRSTLINE=$LINE
-         continue
-      fi
+    say "Looking for duplicate entries..."
+    FIRSTLINE=""
+    REVERSELINES=""
+    DUPECOUNT=0
+    for LINE in `printf "$LINES"`
+    do
+        if [ "$LINE" = "" ]; then
+            continue
+        fi
+        if [ "$FIRSTLINE" = "" ]; then
+            FIRSTLINE=$LINE
+            continue
+        fi
 
-      DUPECOUNT=`expr $DUPECOUNT + 1`
-      REVERSELINES="$LINE\n$REVERSELINES"
-   done
+        DUPECOUNT=`expr $DUPECOUNT + 1`
+        REVERSELINES="$LINE\n$REVERSELINES"
+    done
 
-   say "Found %d duplicates\n" "$DUPECOUNT"
-   for LINE in `printf "$REVERSELINES"`
-   do
-      if [ "$LINE" = "" ]; then
-         continue
-      fi
-      LINENUM=`echo $LINE | awk -F= '{print $1}'`
-      LAST_CONNECT_HOST=$CPANEL_SERVER
-      REQUEST="GET /xml-api/cpanel?cpanel_xmlapi_module=ZoneEdit&cpanel_xmlapi_func=remove_zone_record&cpanel_xmlapi_apiversion=2&domain=$DOMAIN&line=$LINENUM HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns.sh $VERSION\r\n\r\n\r\n"
-      say "Removing Duplicate entry for %s%s. (line %d)\n" "$SUBDOMAIN" "$DOMAIN" "$LINENUM"
-      RESULT=`printf "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>&1`
-      check_results_for_error "$RESULT" "$REQUEST"
-      say "%s\n" "$RESULT"
-   done
+    say "Found %d duplicates\n" "$DUPECOUNT"
+    for LINE in `printf "$REVERSELINES"`
+    do
+        if [ "$LINE" = "" ]; then
+            continue
+        fi
+        LINENUM=`echo $LINE | awk -F= '{print $1}'`
+        LAST_CONNECT_HOST=$CPANEL_SERVER
+        REQUEST="GET /xml-api/cpanel?cpanel_xmlapi_module=ZoneEdit&cpanel_xmlapi_func=remove_zone_record&cpanel_xmlapi_apiversion=2&domain=$DOMAIN&line=$LINENUM HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns.sh $VERSION\r\n\r\n\r\n"
+        say "Removing Duplicate entry for %s%s. (line %d)\n" "$SUBDOMAIN" "$DOMAIN" "$LINENUM"
+        RESULT=`printf "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>&1`
+        check_results_for_error "$RESULT" "$REQUEST"
+        say "%s\n" "$RESULT"
+    done
 }
 
 update_records () {
 
-   if [ "$FIRSTLINE" = "" ]; then
-      say "Record %s%s. does not exist.  Setting %s%s. to %s\n" "$SUBDOMAIN" "$DOMAIN" "$SUBDOMAIN" "$DOMAIN" "$MYADDRESS"
-      LAST_CONNECT_HOST=$CPANEL_SERVER
-      REQUEST="GET /xml-api/cpanel?cpanel_xmlapi_module=ZoneEdit&cpanel_xmlapi_func=add_zone_record&cpanel_xmlapi_apiversion=2&domain=$DOMAIN&name=$APINAME&type=A&address=$MYADDRESS&ttl=300 HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns.sh $VERSION\r\n\r\n\r\n"
-      RESULT=`printf "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>&1`
-      check_results_for_error "$RESULT" "$REQUEST"
-   else
-      ADDRESS=`echo $FIRSTLINE | awk -F= '{print $2}'`
-      LINENUM=`echo $FIRSTLINE | awk -F= '{print $1}'`
+    if [ "$FIRSTLINE" = "" ]; then
+        say "Record %s%s. does not exist.  Setting %s%s. to %s\n" "$SUBDOMAIN" "$DOMAIN" "$SUBDOMAIN" "$DOMAIN" "$MYADDRESS"
+        LAST_CONNECT_HOST=$CPANEL_SERVER
+        REQUEST="GET /xml-api/cpanel?cpanel_xmlapi_module=ZoneEdit&cpanel_xmlapi_func=add_zone_record&cpanel_xmlapi_apiversion=2&domain=$DOMAIN&name=$APINAME&type=A&address=$MYADDRESS&ttl=300 HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns.sh $VERSION\r\n\r\n\r\n"
+        RESULT=`printf "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>&1`
+        check_results_for_error "$RESULT" "$REQUEST"
+    else
+        ADDRESS=`echo $FIRSTLINE | awk -F= '{print $2}'`
+        LINENUM=`echo $FIRSTLINE | awk -F= '{print $1}'`
 
-      if [ "$ADDRESS" = "$MYADDRESS" ]; then
-         say "Record %s%s. already exists in zone on line %s of the %s zone.\n" "$SUBDOMAIN" "$DOMAIN" "$LINENUM" "$DOMAIN"
-         say "Not updating as its already set to %s\n" "$ADDRESS"
-         echo "LAST_ADDRESS=\"$MYADDRESS\"" > $LAST_RUN_FILE
-         terminate
-      fi
-      say "Record %s%s. already exists in zone on line %d with address %s.   Updating to %s\n" "$SUBDOMAIN" "$DOMAIN" "$LINENUM" "$ADDRESS" "$MYADDRESS"
-      LAST_CONNECT_HOST=$CPANEL_SERVER
-      REQUEST="GET /xml-api/cpanel?cpanel_xmlapi_module=ZoneEdit&cpanel_xmlapi_func=edit_zone_record&cpanel_xmlapi_apiversion=2&Line=$FIRSTLINE&domain=$DOMAIN&name=$APINAME&type=A&address=$MYADDRESS&ttl=300 HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns.sh $VERSION\r\n\r\n\r\n"
-      RESULT=`printf "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>&1`
-      check_results_for_error "$RESULT" "$REQUEST"
-   fi
+        if [ "$ADDRESS" = "$MYADDRESS" ]; then
+            say "Record %s%s. already exists in zone on line %s of the %s zone.\n" "$SUBDOMAIN" "$DOMAIN" "$LINENUM" "$DOMAIN"
+            say "Not updating as its already set to %s\n" "$ADDRESS"
+            echo "LAST_ADDRESS=\"$MYADDRESS\"" > $LAST_RUN_FILE
+            terminate
+        fi
+        say "Record %s%s. already exists in zone on line %d with address %s.   Updating to %s\n" "$SUBDOMAIN" "$DOMAIN" "$LINENUM" "$ADDRESS" "$MYADDRESS"
+        LAST_CONNECT_HOST=$CPANEL_SERVER
+        REQUEST="GET /xml-api/cpanel?cpanel_xmlapi_module=ZoneEdit&cpanel_xmlapi_func=edit_zone_record&cpanel_xmlapi_apiversion=2&Line=$FIRSTLINE&domain=$DOMAIN&name=$APINAME&type=A&address=$MYADDRESS&ttl=300 HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns.sh $VERSION\r\n\r\n\r\n"
+        RESULT=`printf "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>&1`
+        check_results_for_error "$RESULT" "$REQUEST"
+    fi
 
 
-   if [ "`echo $RESULT | grep newserial`" ]; then
-      say "Record updated ok\n"
-      echo "LAST_ADDRESS=\"$MYADDRESS\""  > $LAST_RUN_FILE
-   else
-      say "Failed to update record\n"
-      say "%s\n" "$RESULT"
-   fi
+    if [ "`echo $RESULT | grep newserial`" ]; then
+        say "Record updated ok\n"
+        echo "LAST_ADDRESS=\"$MYADDRESS\""  > $LAST_RUN_FILE
+    else
+        say "Failed to update record\n"
+        say "%s\n" "$RESULT"
+    fi
 
 }
 
 check_results_for_error ()
 {
-   REQUEST_RESULTS="$1"
-   REQUEST="$2"
-   if [ "`echo $REQUEST_RESULTS | grep '<status>1</status>'`" ]; then
-       say "success..."
-   else
-      INREASON=0
-      INSTATUSMSG=0
-      MSG=""
-      STATUSMSG=""
+    REQUEST_RESULTS="$1"
+    REQUEST="$2"
+    if [ "`echo $REQUEST_RESULTS | grep '<status>1</status>'`" ]; then
+        say "success..."
+    else
+        INREASON=0
+        INSTATUSMSG=0
+        MSG=""
+        STATUSMSG=""
 
-      for LINE in $REQUEST_RESULTS
-      do
-         if [ "`echo $LINE | grep '<reason>'`" != "" ]; then
-            INREASON=1
-            INSTATUSMSG=0
-            MSG=`echo $LINE | awk -F'>' '{print \$2}'`
-            continue
-         fi
-         if [ "`echo $LINE | grep '</reason>'`" != "" ]; then
-            INREASON=0
-            MSGADD=`echo $LINE | awk -F'<' '{print \$1}'`
-            MSG="$MSG $MSGADD"
-            continue
-         fi
-         if [ "`echo $LINE | grep '<statusmsg>'`" != "" ]; then
-            INSTATUSMSG=1
-            INREASON=0
-            STATUSMSG=`echo $LINE | awk -F'>' '{print \$2}'`
-            continue
-         fi
-         if [ "`echo $LINE | grep '</statusmsg>'`" != "" ]; then
-            INSTATUSMSG=0
-            MSGADD=`echo $LINE | awk -F'<' '{print \$1}'`
-            STATUSMSG="$STATUSMSG $MSGADD"
-            continue
-         fi
-         if [ "$INREASON" = "1" ]; then
-            MSG="$MSG $LINE"
-         fi
-         if [ "$INSTATUSMSG" = "1" ]; then
-            STATUSMSG="$STATUSMSG $LINE"
-         fi
+        for LINE in $REQUEST_RESULTS
+        do
+            if [ "`echo $LINE | grep '<reason>'`" != "" ]; then
+                INREASON=1
+                INSTATUSMSG=0
+                MSG=`echo $LINE | awk -F'>' '{print \$2}'`
+                continue
+            fi
+            if [ "`echo $LINE | grep '</reason>'`" != "" ]; then
+                INREASON=0
+                MSGADD=`echo $LINE | awk -F'<' '{print \$1}'`
+                MSG="$MSG $MSGADD"
+                continue
+            fi
+            if [ "`echo $LINE | grep '<statusmsg>'`" != "" ]; then
+                INSTATUSMSG=1
+                INREASON=0
+                STATUSMSG=`echo $LINE | awk -F'>' '{print \$2}'`
+                continue
+            fi
+            if [ "`echo $LINE | grep '</statusmsg>'`" != "" ]; then
+                INSTATUSMSG=0
+                MSGADD=`echo $LINE | awk -F'<' '{print \$1}'`
+                STATUSMSG="$STATUSMSG $MSGADD"
+                continue
+            fi
+            if [ "$INREASON" = "1" ]; then
+                MSG="$MSG $LINE"
+            fi
+            if [ "$INSTATUSMSG" = "1" ]; then
+                STATUSMSG="$STATUSMSG $LINE"
+            fi
 
-      done
+        done
 
-      if [ "$MSG" = "" ]; then
-         MSG="Unknown Error"
-         if [ "$STATUSMSG" = "" ]; then
-            STATUSMSG="Please make sure you have the zoneedit, or simplezone edit permission on your account."
-         fi
-      fi
-      say "Request failed with error: %s (%s)\n" "$MSG" "$STATUSMSG"
-      notify_failure "$MSG" "$STATUSMSG" "$REQUEST_RESULTS" "$REQUEST"
-      terminate
-   fi
+        if [ "$MSG" = "" ]; then
+            MSG="Unknown Error"
+            if [ "$STATUSMSG" = "" ]; then
+                STATUSMSG="Please make sure you have the zoneedit, or simplezone edit permission on your account."
+            fi
+        fi
+        say "Request failed with error: %s (%s)\n" "$MSG" "$STATUSMSG"
+        notify_failure "$MSG" "$STATUSMSG" "$REQUEST_RESULTS" "$REQUEST"
+        terminate
+    fi
 }
 
 notify_failure ()
 {
-   MSG="$1"
-   STATUSMSG="$2"
-   REQUEST_RESULTS="$3"
-   CURRENT_TIME=`date +%s`
-   LAST_TIME=0
-   if [ -e "$LAST_FAIL_FILE" ]; then
-      . $LAST_FAIL_FILE
-   fi
-   TIME_DIFF=`expr $CURRENT_TIME - $LAST_TIME`
+    MSG="$1"
+    STATUSMSG="$2"
+    REQUEST_RESULTS="$3"
+    CURRENT_TIME=`date +%s`
+    LAST_TIME=0
+    if [ -e "$LAST_FAIL_FILE" ]; then
+        . $LAST_FAIL_FILE
+    fi
+    TIME_DIFF=`expr $CURRENT_TIME - $LAST_TIME`
 
-   if [ "$CONTACT_EMAIL" = "" ]; then
-      echo "No contact email address was set.  Cannot send failure notification."
-      return
-   fi
+    if [ "$CONTACT_EMAIL" = "" ]; then
+        echo "No contact email address was set.  Cannot send failure notification."
+        return
+    fi
 
-   if [ $TIME_DIFF -gt $FAILURE_NOTIFY_INTERVAL ]; then
-      echo "LAST_TIME=$CURRENT_TIME" > $LAST_FAIL_FILE
+    if [ $TIME_DIFF -gt $FAILURE_NOTIFY_INTERVAL ]; then
+        echo "LAST_TIME=$CURRENT_TIME" > $LAST_FAIL_FILE
 
-      SUBJECT="Failed to update dynamic DNS for $SUBDOMAIN$DOMAIN. on $CPANEL_SERVER : $MSG ($STATUMSG)"
-      if [ -e "/bin/mail" ]; then
-         say "sending email notification of failure.\n"
-         printf "Status Message: $STATUSMSG\nThe full response was: $REQUEST_RESULTS" | /bin/mail -s "$SUBJECT" $CONTACT_EMAIL
-      else
-         say "/bin/mail is not available, cannot send notification of failure.\n"
-      fi
-   else
-      say "skipping notification because a notication was sent %d seconds ago.\n" "$TIME_DIFF"
-   fi
+        SUBJECT="Failed to update dynamic DNS for $SUBDOMAIN$DOMAIN. on $CPANEL_SERVER : $MSG ($STATUMSG)"
+        if [ -e "/bin/mail" ]; then
+            say "sending email notification of failure.\n"
+            printf "Status Message: $STATUSMSG\nThe full response was: $REQUEST_RESULTS" | /bin/mail -s "$SUBJECT" $CONTACT_EMAIL
+        else
+            say "/bin/mail is not available, cannot send notification of failure.\n"
+        fi
+    else
+        say "skipping notification because a notication was sent %d seconds ago.\n" "$TIME_DIFF"
+    fi
 }
 
 terminate () {
-   if [ "$ALARMPID" != "" ]; then
-      kill $ALARMPID
-   fi
-   exit
+    if [ "$ALARMPID" != "" ]; then
+        kill $ALARMPID
+    fi
+    exit
 }
 
 check_for_root () {
-   if [ "$PERMIT_ROOT_EXECUTION" = "1" ]; then
-      return
-   fi
-   if [ "`id -u`" = "0" ]; then
-      echo "You should not run this script as root if possible"
-      echo "If you really want to run as root please run"
-      echo "echo \"PERMIT_ROOT_EXECUTION=1\" >> /etc/$BASEDIR.conf"
-      echo "and run this script again"
-      terminate
-   fi
+    if [ "$PERMIT_ROOT_EXECUTION" = "1" ]; then
+        return
+    fi
+    if [ "`id -u`" = "0" ]; then
+        echo "You should not run this script as root if possible"
+        echo "If you really want to run as root please run"
+        echo "echo \"PERMIT_ROOT_EXECUTION=1\" >> /etc/$BASEDIR.conf"
+        echo "and run this script again"
+        terminate
+    fi
 }
 
 check_config () {
-   if [ "$CONTACT_EMAIL" = "" ]; then
-      echo "= Warning: no email address set for notifications"
-   fi
-   if [ "$CPANEL_SERVER" = "" ]; then
-      echo "= Error: CPANEL_SERVER must be set in a configuration file"
-      exit
-   fi
-   if [ "$DOMAIN" = "" ]; then
-      echo "= Error: DOMAIN must be set in a configuration file"
-      exit
-   fi
-   if [ "$CPANEL_USER" = "" ]; then
-      echo "= Error: CPANEL_USER must be set in a configuration file"
-      exit
-   fi
-   if [ "$CPANEL_PASS" = "" ]; then
-      echo "= Error: CPANEL_PASS must be set in a configuration file"
-      exit
-   fi
+    if [ "$CONTACT_EMAIL" = "" ]; then
+        echo "= Warning: no email address set for notifications"
+    fi
+    if [ "$CPANEL_SERVER" = "" ]; then
+        echo "= Error: CPANEL_SERVER must be set in a configuration file"
+        exit
+    fi
+    if [ "$DOMAIN" = "" ]; then
+        echo "= Error: DOMAIN must be set in a configuration file"
+        exit
+    fi
+    if [ "$CPANEL_USER" = "" ]; then
+        echo "= Error: CPANEL_USER must be set in a configuration file"
+        exit
+    fi
+    if [ "$CPANEL_PASS" = "" ]; then
+        echo "= Error: CPANEL_PASS must be set in a configuration file"
+        exit
+    fi
 }
 
 setup_vars
