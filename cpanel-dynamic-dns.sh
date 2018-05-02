@@ -134,7 +134,7 @@ fetch_myaddress ()
       echo -n "Determining IP Address..."
    fi
    LAST_CONNECT_HOST="myip.cpanel.net"
-   MYADDRESS=`echo -e "GET /v1.0/ HTTP/1.0\r\nHost: myip.cpanel.net\r\nConnection: close\r\n\r\n" | openssl s_client -quiet -connect myip.cpanel.net:443 2>/dev/null | tail -1`
+   MYADDRESS=`printf "GET /v1.0/ HTTP/1.0\r\nHost: myip.cpanel.net\r\nConnection: close\r\n\r\n" | openssl s_client -quiet -connect myip.cpanel.net:443 2>/dev/null | tail -1`
    if [ "$QUIET" != "1" ]; then
       echo -n $MYADDRESS
       echo "...Done"
@@ -180,7 +180,7 @@ fetch_zone () {
    LINES=""
    INRECORD=0
    USETHISRECORD=0
-   REQUEST_RESULTS=`echo -e "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>/dev/null`
+   REQUEST_RESULTS=`printf "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>/dev/null`
 
    check_results_for_error "$REQUEST_RESULTS" "$REQUEST"
    for LINE in $REQUEST_RESULTS
@@ -192,8 +192,8 @@ fetch_zone () {
       if [ "$LINE" = "</record>" ]; then
          INRECORD=0
          if [ "$USETHISRECORD" = "2" ]; then
-            LINENUM=`echo -e "$RECORD" | grep '<Line>' | awk -F'<' '{print \$2}' | awk -F'>' '{print \$2}'`
-            ADDRESS=`echo -e "$RECORD" | grep -i '<address>' | awk -F'<' '{print \$2}' | awk -F'>' '{print \$2}'`
+            LINENUM=`printf "$RECORD" | grep '<Line>' | awk -F'<' '{print \$2}' | awk -F'>' '{print \$2}'`
+            ADDRESS=`printf "$RECORD" | grep -i '<address>' | awk -F'<' '{print \$2}' | awk -F'>' '{print \$2}'`
             LINES="$LINES\n$LINENUM=$ADDRESS"
          fi
          USETHISRECORD=0
@@ -223,7 +223,7 @@ parse_zone () {
    FIRSTLINE=""
    REVERSELINES=""
    DUPECOUNT=0
-   for LINE in `echo -e $LINES`
+   for LINE in `printf "$LINES"`
    do
       if [ "$LINE" = "" ]; then
          continue
@@ -240,7 +240,7 @@ parse_zone () {
    if [ "$QUIET" != "1" ]; then
       echo "Found $DUPECOUNT duplicates"
    fi
-   for LINE in `echo -e $REVERSELINES`
+   for LINE in `printf "$REVERSELINES"`
    do
       if [ "$LINE" = "" ]; then
          continue
@@ -251,7 +251,7 @@ parse_zone () {
       if [ "$QUIET" != "1" ]; then
          echo "Removing Duplicate entry for $SUBDOMAIN$DOMAIN. (line $LINENUM)"
       fi
-      RESULT=`echo -e "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>&1`
+      RESULT=`printf "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>&1`
       check_results_for_error "$RESULT" "$REQUEST"
       if [ "$QUIET" != "1" ]; then
          echo $RESULT
@@ -267,7 +267,7 @@ update_records () {
       fi
       LAST_CONNECT_HOST=$CPANEL_SERVER
       REQUEST="GET /xml-api/cpanel?cpanel_xmlapi_module=ZoneEdit&cpanel_xmlapi_func=add_zone_record&cpanel_xmlapi_apiversion=2&domain=$DOMAIN&name=$APINAME&type=A&address=$MYADDRESS&ttl=300 HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns.sh $VERSION\r\n\r\n\r\n"
-      RESULT=`echo -e "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>&1`
+      RESULT=`printf "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>&1`
       check_results_for_error "$RESULT" "$REQUEST"
    else
       ADDRESS=`echo $FIRSTLINE | awk -F= '{print $2}'`
@@ -286,7 +286,7 @@ update_records () {
       fi
       LAST_CONNECT_HOST=$CPANEL_SERVER
       REQUEST="GET /xml-api/cpanel?cpanel_xmlapi_module=ZoneEdit&cpanel_xmlapi_func=edit_zone_record&cpanel_xmlapi_apiversion=2&Line=$FIRSTLINE&domain=$DOMAIN&name=$APINAME&type=A&address=$MYADDRESS&ttl=300 HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns.sh $VERSION\r\n\r\n\r\n"
-      RESULT=`echo -e "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>&1`
+      RESULT=`printf "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>&1`
       check_results_for_error "$RESULT" "$REQUEST"
    fi
 
@@ -393,7 +393,7 @@ notify_failure ()
          if [ "$QUIET" != "1" ]; then
             echo "sending email notification of failure."
          fi
-         echo -e "Status Message: $STATUSMSG\nThe full response was: $REQUEST_RESULTS" | /bin/mail -s "$SUBJECT" $CONTACT_EMAIL
+         printf "Status Message: $STATUSMSG\nThe full response was: $REQUEST_RESULTS" | /bin/mail -s "$SUBJECT" $CONTACT_EMAIL
       else
          if [ "$QUIET" != "1" ]; then
             echo "/bin/mail is not available, cannot send notification of failure."
