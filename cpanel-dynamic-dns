@@ -177,7 +177,7 @@ generate_auth_string () {
 fetch_zone () {
     say "Fetching zone for %s...." "$DOMAIN"
     LAST_CONNECT_HOST=$CPANEL_SERVER
-    REQUEST="GET /xml-api/cpanel?cpanel_xmlapi_module=ZoneEdit&cpanel_xmlapi_func=fetchzone&cpanel_xmlapi_apiversion=2&domain=$DOMAIN HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns.sh $VERSION\r\n\r\n\r\n"
+    REQUEST="GET /xml-api/cpanel?cpanel_xmlapi_module=ZoneEdit&cpanel_xmlapi_func=fetchzone&cpanel_xmlapi_apiversion=2&domain=$DOMAIN HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns $VERSION\r\n\r\n\r\n"
     RECORD=""
     LINES=""
     INRECORD=0
@@ -243,7 +243,7 @@ parse_zone () {
         fi
         LINENUM=`echo $LINE | awk -F= '{print $1}'`
         LAST_CONNECT_HOST=$CPANEL_SERVER
-        REQUEST="GET /xml-api/cpanel?cpanel_xmlapi_module=ZoneEdit&cpanel_xmlapi_func=remove_zone_record&cpanel_xmlapi_apiversion=2&domain=$DOMAIN&line=$LINENUM HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns.sh $VERSION\r\n\r\n\r\n"
+        REQUEST="GET /xml-api/cpanel?cpanel_xmlapi_module=ZoneEdit&cpanel_xmlapi_func=remove_zone_record&cpanel_xmlapi_apiversion=2&domain=$DOMAIN&line=$LINENUM HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns $VERSION\r\n\r\n\r\n"
         say "Removing Duplicate entry for %s%s. (line %d)\n" "$SUBDOMAIN" "$DOMAIN" "$LINENUM"
         RESULT=`printf "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>&1`
         check_results_for_error "$RESULT" "$REQUEST"
@@ -256,7 +256,7 @@ update_records () {
     if [ "$FIRSTLINE" = "" ]; then
         say "Record %s%s. does not exist.  Setting %s%s. to %s\n" "$SUBDOMAIN" "$DOMAIN" "$SUBDOMAIN" "$DOMAIN" "$MYADDRESS"
         LAST_CONNECT_HOST=$CPANEL_SERVER
-        REQUEST="GET /xml-api/cpanel?cpanel_xmlapi_module=ZoneEdit&cpanel_xmlapi_func=add_zone_record&cpanel_xmlapi_apiversion=2&domain=$DOMAIN&name=$APINAME&type=A&address=$MYADDRESS&ttl=300 HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns.sh $VERSION\r\n\r\n\r\n"
+        REQUEST="GET /xml-api/cpanel?cpanel_xmlapi_module=ZoneEdit&cpanel_xmlapi_func=add_zone_record&cpanel_xmlapi_apiversion=2&domain=$DOMAIN&name=$APINAME&type=A&address=$MYADDRESS&ttl=300 HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns $VERSION\r\n\r\n\r\n"
         RESULT=`printf "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>&1`
         check_results_for_error "$RESULT" "$REQUEST"
     else
@@ -271,7 +271,7 @@ update_records () {
         fi
         say "Record %s%s. already exists in zone on line %d with address %s.   Updating to %s\n" "$SUBDOMAIN" "$DOMAIN" "$LINENUM" "$ADDRESS" "$MYADDRESS"
         LAST_CONNECT_HOST=$CPANEL_SERVER
-        REQUEST="GET /xml-api/cpanel?cpanel_xmlapi_module=ZoneEdit&cpanel_xmlapi_func=edit_zone_record&cpanel_xmlapi_apiversion=2&Line=$FIRSTLINE&domain=$DOMAIN&name=$APINAME&type=A&address=$MYADDRESS&ttl=300 HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns.sh $VERSION\r\n\r\n\r\n"
+        REQUEST="GET /xml-api/cpanel?cpanel_xmlapi_module=ZoneEdit&cpanel_xmlapi_func=edit_zone_record&cpanel_xmlapi_apiversion=2&Line=$FIRSTLINE&domain=$DOMAIN&name=$APINAME&type=A&address=$MYADDRESS&ttl=300 HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns $VERSION\r\n\r\n\r\n"
         RESULT=`printf "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>&1`
         check_results_for_error "$RESULT" "$REQUEST"
     fi
