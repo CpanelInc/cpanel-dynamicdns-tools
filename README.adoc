@@ -1,0 +1,11 @@
+= cPanel Dynamic DNS Tools
+
+== Overview
+
+This script can be run on most modern Unix and Linux systems to use a cPanel &
+WHM server as a dynamic DNS provider.
+
+== License
+
+This script is licensed under the Apache License, version 2.0.
+See the link:LICENSE[LICENSE file] for more details.
