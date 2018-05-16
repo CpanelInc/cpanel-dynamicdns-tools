@@ -17,6 +17,8 @@
 # RedHat EL 4,5,6
 # CentOS 4,5,6
 # OpenWRT (w/openssl installed)
+#
+# Requires Perl 5.8 or newer with JSON::PP.
 
 # Configuration should be done in the configuration files
 # or it can be manually set here
@@ -94,6 +96,9 @@ setup_vars ()
     NOTIFY_FAILURE="1"
     TIMEOUT="120"
     BASEDIR="cpdyndns"
+
+    # Find a suitable path for perl.
+    PATH="/usr/local/cpanel/3rdparty/bin:$PATH:/usr/bin:/usr/local/bin"
 }
 
 setup_config_vars ()
@@ -177,7 +182,7 @@ generate_auth_string () {
 fetch_zone () {
     say "Fetching zone for %s...." "$DOMAIN"
     LAST_CONNECT_HOST=$CPANEL_SERVER
-    REQUEST="GET /xml-api/cpanel?cpanel_xmlapi_module=ZoneEdit&cpanel_xmlapi_func=fetchzone&cpanel_xmlapi_apiversion=2&domain=$DOMAIN HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns.sh $VERSION\r\n\r\n\r\n"
+    REQUEST="GET /json-api/cpanel?cpanel_jsonapi_module=ZoneEdit&cpanel_jsonapi_func=fetchzone&cpanel_jsonapi_apiversion=2&domain=$DOMAIN HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns $VERSION\r\n\r\n\r\n"
     RECORD=""
     LINES=""
     INRECORD=0
@@ -185,33 +190,15 @@ fetch_zone () {
     REQUEST_RESULTS=`printf "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>/dev/null`
 
     check_results_for_error "$REQUEST_RESULTS" "$REQUEST"
-    for LINE in $REQUEST_RESULTS
-    do
-        if [ "$LINE" = "<record>" ]; then
-            INRECORD=1
-            continue
-        fi
-        if [ "$LINE" = "</record>" ]; then
-            INRECORD=0
-            if [ "$USETHISRECORD" = "2" ]; then
-                LINENUM=`printf "$RECORD" | grep '<Line>' | awk -F'<' '{print \$2}' | awk -F'>' '{print \$2}'`
-                ADDRESS=`printf "$RECORD" | grep -i '<address>' | awk -F'<' '{print \$2}' | awk -F'>' '{print \$2}'`
-                LINES="$LINES\n$LINENUM=$ADDRESS"
-            fi
-            USETHISRECORD=0
-            RECORD=""
-            continue
-        fi
-        if [ "$LINE" = "<type>A</type>" ]; then
-            USETHISRECORD=`expr $USETHISRECORD + 1`
-        fi
-        if [ "$LINE" = "<name>$SUBDOMAIN$DOMAIN.</name>" ]; then
-            USETHISRECORD=`expr $USETHISRECORD + 1`
-        fi
-        if [ "$INRECORD" = "1" ]; then
-            RECORD="$RECORD\n$LINE"
-        fi
-    done
+    LINES="$(extract_from_json "$REQUEST_RESULTS" "
+        do {
+            join(qq{\n}, map {
+                qq{\$_->{Line}=\$_->{address}}
+            } grep {
+                \$_->{type} eq q{A} && \$_->{name} eq q{$SUBDOMAIN$DOMAIN.}
+            } @{\$_->{cpanelresult}{data}[0]{record}});
+        }
+    ")"
 
     say "Done\n"
 }
@@ -243,7 +230,7 @@ parse_zone () {
         fi
         LINENUM=`echo $LINE | awk -F= '{print $1}'`
         LAST_CONNECT_HOST=$CPANEL_SERVER
-        REQUEST="GET /xml-api/cpanel?cpanel_xmlapi_module=ZoneEdit&cpanel_xmlapi_func=remove_zone_record&cpanel_xmlapi_apiversion=2&domain=$DOMAIN&line=$LINENUM HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns.sh $VERSION\r\n\r\n\r\n"
+        REQUEST="GET /json-api/cpanel?cpanel_jsonapi_module=ZoneEdit&cpanel_jsonapi_func=remove_zone_record&cpanel_jsonapi_apiversion=2&domain=$DOMAIN&line=$LINENUM HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns $VERSION\r\n\r\n\r\n"
         say "Removing Duplicate entry for %s%s. (line %d)\n" "$SUBDOMAIN" "$DOMAIN" "$LINENUM"
         RESULT=`printf "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>&1`
         check_results_for_error "$RESULT" "$REQUEST"
@@ -256,7 +243,7 @@ update_records () {
     if [ "$FIRSTLINE" = "" ]; then
         say "Record %s%s. does not exist.  Setting %s%s. to %s\n" "$SUBDOMAIN" "$DOMAIN" "$SUBDOMAIN" "$DOMAIN" "$MYADDRESS"
         LAST_CONNECT_HOST=$CPANEL_SERVER
-        REQUEST="GET /xml-api/cpanel?cpanel_xmlapi_module=ZoneEdit&cpanel_xmlapi_func=add_zone_record&cpanel_xmlapi_apiversion=2&domain=$DOMAIN&name=$APINAME&type=A&address=$MYADDRESS&ttl=300 HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns.sh $VERSION\r\n\r\n\r\n"
+        REQUEST="GET /json-api/cpanel?cpanel_jsonapi_module=ZoneEdit&cpanel_jsonapi_func=add_zone_record&cpanel_jsonapi_apiversion=2&domain=$DOMAIN&name=$APINAME&type=A&address=$MYADDRESS&ttl=300 HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns $VERSION\r\n\r\n\r\n"
         RESULT=`printf "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>&1`
         check_results_for_error "$RESULT" "$REQUEST"
     else
@@ -271,7 +258,7 @@ update_records () {
         fi
         say "Record %s%s. already exists in zone on line %d with address %s.   Updating to %s\n" "$SUBDOMAIN" "$DOMAIN" "$LINENUM" "$ADDRESS" "$MYADDRESS"
         LAST_CONNECT_HOST=$CPANEL_SERVER
-        REQUEST="GET /xml-api/cpanel?cpanel_xmlapi_module=ZoneEdit&cpanel_xmlapi_func=edit_zone_record&cpanel_xmlapi_apiversion=2&Line=$FIRSTLINE&domain=$DOMAIN&name=$APINAME&type=A&address=$MYADDRESS&ttl=300 HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns.sh $VERSION\r\n\r\n\r\n"
+        REQUEST="GET /json-api/cpanel?cpanel_jsonapi_module=ZoneEdit&cpanel_jsonapi_func=edit_zone_record&cpanel_jsonapi_apiversion=2&Line=$FIRSTLINE&domain=$DOMAIN&name=$APINAME&type=A&address=$MYADDRESS&ttl=300 HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns $VERSION\r\n\r\n\r\n"
         RESULT=`printf "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>&1`
         check_results_for_error "$RESULT" "$REQUEST"
     fi
@@ -287,11 +274,23 @@ update_records () {
 
 }
 
+extract_from_json ()
+{
+    DATA="$1"
+    PATTERN="$2"
+
+    printf "%s" "$DATA" | \
+        perl -0777 -MJSON::PP -p \
+        -e '(undef, $_) = split /\r\n\r\n/, $_, 2;' \
+        -e '$_ = JSON::PP::decode_json($_);' \
+        -e "\$_ = $PATTERN;"
+}
+
 check_results_for_error ()
 {
-    REQUEST_RESULTS="$1"
+    RESULTS="$1"
     REQUEST="$2"
-    if [ "`echo $REQUEST_RESULTS | grep '<status>1</status>'`" ]; then
+    if [ "$(extract_from_json "$RESULTS" '$_->{cpanelresult}{event}{result}')" = "1" ]; then
         say "success..."
     else
         INREASON=0
@@ -299,40 +298,8 @@ check_results_for_error ()
         MSG=""
         STATUSMSG=""
 
-        for LINE in $REQUEST_RESULTS
-        do
-            if [ "`echo $LINE | grep '<reason>'`" != "" ]; then
-                INREASON=1
-                INSTATUSMSG=0
-                MSG=`echo $LINE | awk -F'>' '{print \$2}'`
-                continue
-            fi
-            if [ "`echo $LINE | grep '</reason>'`" != "" ]; then
-                INREASON=0
-                MSGADD=`echo $LINE | awk -F'<' '{print \$1}'`
-                MSG="$MSG $MSGADD"
-                continue
-            fi
-            if [ "`echo $LINE | grep '<statusmsg>'`" != "" ]; then
-                INSTATUSMSG=1
-                INREASON=0
-                STATUSMSG=`echo $LINE | awk -F'>' '{print \$2}'`
-                continue
-            fi
-            if [ "`echo $LINE | grep '</statusmsg>'`" != "" ]; then
-                INSTATUSMSG=0
-                MSGADD=`echo $LINE | awk -F'<' '{print \$1}'`
-                STATUSMSG="$STATUSMSG $MSGADD"
-                continue
-            fi
-            if [ "$INREASON" = "1" ]; then
-                MSG="$MSG $LINE"
-            fi
-            if [ "$INSTATUSMSG" = "1" ]; then
-                STATUSMSG="$STATUSMSG $LINE"
-            fi
-
-        done
+        MSG="$(extract_from_json "$RESULTS" '$_->{cpanelresult}{data}[0]{reason}')"
+        STATUSMSG="$(extract_from_json "$RESULTS" '$_->{cpanelresult}{data}[0]{statusmsg}')"
 
         if [ "$MSG" = "" ]; then
             MSG="Unknown Error"
@@ -416,6 +383,10 @@ check_config () {
     fi
     if [ "$CPANEL_PASS" = "" ]; then
         echo "= Error: CPANEL_PASS must be set in a configuration file"
+        exit
+    fi
+    if ! perl -MJSON::PP -e1 >/dev/null 2>&1; then
+        echo "= Error: A version of perl with JSON::PP must be in the PATH"
         exit
     fi
 }
