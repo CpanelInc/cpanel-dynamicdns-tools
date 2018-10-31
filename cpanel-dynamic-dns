@@ -298,8 +298,8 @@ check_results_for_error ()
         MSG=""
         STATUSMSG=""
 
-        MSG="$(extract_from_json "$RESULTS" '$_->{cpanelresult}{data}[0]{reason}')"
-        STATUSMSG="$(extract_from_json "$RESULTS" '$_->{cpanelresult}{data}[0]{statusmsg}')"
+        MSG="$(extract_from_json "$RESULTS" 'ref $_->{cpanelresult}{data} eq q{ARRAY} ? $_->{cpanelresult}{data}[0]{reason} : $_->{cpanelresult}{data}{reason}')"
+        STATUSMSG="$(extract_from_json "$RESULTS" 'ref $_->{cpanelresult}{data} eq {ARRAY} ? $_->{cpanelresult}{data}[0]{statusmsg} : $_->{cpanelresult}{data}{statusmsg}')"
 
         if [ "$MSG" = "" ]; then
             MSG="Unknown Error"
