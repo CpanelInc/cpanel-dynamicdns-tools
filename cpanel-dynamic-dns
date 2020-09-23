@@ -20,6 +20,7 @@
 #
 # Requires Perl 5.8 or newer with JSON::PP.
 
+# ====================================== CONFIG ============================================
 # Configuration should be done in the configuration files
 # or it can be manually set here
 
@@ -47,13 +48,21 @@ CPANEL_SERVER=""
 CPANEL_USER=""
 CPANEL_PASS=""
 
+# optionally, instead of using CPANEL_USER and CPANEL_PASS, preencode these details from the command line using the following command
+# printf "%s:%s" "YOUR_CPANEL_USER" "YOUR_CPANEL_PASS" | openssl enc -base64
+# copy and paste the ouput of the above command into this config variable
+# if you use this configuration option, then CPANEL_USER and CPANEL_PASS will be ignored
+# this is not highly secure but is slightly better than having the user and pass directly in a file
+CPANEL_AUTH_ENCODED=""
+
+
 #
 #  QUIET supresses all information messages (not errors)
 #  set to 0 or 1
 #
 QUIET=""
 
-# Program starts here
+# ====================================== FUNCTIONS ============================================
 banner ()
 {
     if [ "$QUIET" != "1" ]; then
@@ -168,21 +177,38 @@ load_last_run ()
 
 exit_if_last_address_is_current ()
 {
-    if [ "$LAST_ADDRESS" = "$MYADDRESS" ]; then
+    if [ "$FORCE_UPDATE" ]; then
+        say "Forcing update because command line parameter specified\n"
+    elif [ "$LAST_ADDRESS" = "$MYADDRESS" ]; then
         say "Last update was for %s, and address has not changed.\n" "$LAST_ADDRESS"
-        say "If you want to force an update, remove %s\n" "$LAST_RUN_FILE"
+        say "If you want to force an update, remove %s, or use the -f command line parameter\n" "$LAST_RUN_FILE"
         terminate
     fi
 }
 
-generate_auth_string () {
-    AUTH_STRING=`printf "%s:%s" "$CPANEL_USER" "$CPANEL_PASS" | openssl enc -base64`
+generate_auth_header () {
+
+    if [ "$CPANEL_API_TOKEN" ]; then
+        # using the token and username for auth
+        AUTH_HEADER="Authorization: cpanel $CPANEL_USER:$CPANEL_API_TOKEN\n"
+        say "Using CPANEL_API_TOKEN for authentication"
+    elif [ "$CPANEL_AUTH_ENCODED" ]; then
+      # use the preencoded string
+      AUTH_HEADER="Authorization: Basic $CPANEL_AUTH_ENCODED"
+      say "Using CPANEL_AUTH_ENCODED for authentication\n"
+    else
+      # use the user and pass
+      AUTH_STRING=`printf "%s:%s" "$CPANEL_USER" "$CPANEL_PASS" | openssl enc -base64`
+      AUTH_HEADER="Authorization: Basic $AUTH_STRING"
+      say "Using CPANEL_user and CPANEL_PASS for authentication\n"
+    fi
+    
 }
 
 fetch_zone () {
     say "Fetching zone for %s...." "$DOMAIN"
     LAST_CONNECT_HOST=$CPANEL_SERVER
-    REQUEST="GET /json-api/cpanel?cpanel_jsonapi_module=ZoneEdit&cpanel_jsonapi_func=fetchzone&cpanel_jsonapi_apiversion=2&domain=$DOMAIN HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns $VERSION\r\n\r\n\r\n"
+    REQUEST="GET /json-api/cpanel?cpanel_jsonapi_module=ZoneEdit&cpanel_jsonapi_func=fetchzone&cpanel_jsonapi_apiversion=2&domain=$DOMAIN HTTP/1.0\r\nConnection: close\r\n$AUTH_HEADER\r\nUser-Agent: cpanel-dynamic-dns $VERSION\r\n\r\n\r\n"
     RECORD=""
     LINES=""
     INRECORD=0
@@ -230,7 +256,7 @@ parse_zone () {
         fi
         LINENUM=`echo $LINE | awk -F= '{print $1}'`
         LAST_CONNECT_HOST=$CPANEL_SERVER
-        REQUEST="GET /json-api/cpanel?cpanel_jsonapi_module=ZoneEdit&cpanel_jsonapi_func=remove_zone_record&cpanel_jsonapi_apiversion=2&domain=$DOMAIN&line=$LINENUM HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns $VERSION\r\n\r\n\r\n"
+        REQUEST="GET /json-api/cpanel?cpanel_jsonapi_module=ZoneEdit&cpanel_jsonapi_func=remove_zone_record&cpanel_jsonapi_apiversion=2&domain=$DOMAIN&line=$LINENUM HTTP/1.0\r\nConnection: close\r\n$AUTH_HEADER\r\nUser-Agent: cpanel-dynamic-dns $VERSION\r\n\r\n\r\n"
         say "Removing Duplicate entry for %s%s. (line %d)\n" "$SUBDOMAIN" "$DOMAIN" "$LINENUM"
         RESULT=`printf "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>&1`
         check_results_for_error "$RESULT" "$REQUEST"
@@ -243,7 +269,7 @@ update_records () {
     if [ "$FIRSTLINE" = "" ]; then
         say "Record %s%s. does not exist.  Setting %s%s. to %s\n" "$SUBDOMAIN" "$DOMAIN" "$SUBDOMAIN" "$DOMAIN" "$MYADDRESS"
         LAST_CONNECT_HOST=$CPANEL_SERVER
-        REQUEST="GET /json-api/cpanel?cpanel_jsonapi_module=ZoneEdit&cpanel_jsonapi_func=add_zone_record&cpanel_jsonapi_apiversion=2&domain=$DOMAIN&name=$APINAME&type=A&address=$MYADDRESS&ttl=300 HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns $VERSION\r\n\r\n\r\n"
+        REQUEST="GET /json-api/cpanel?cpanel_jsonapi_module=ZoneEdit&cpanel_jsonapi_func=add_zone_record&cpanel_jsonapi_apiversion=2&domain=$DOMAIN&name=$APINAME&type=A&address=$MYADDRESS&ttl=300 HTTP/1.0\r\nConnection: close\r\n$AUTH_HEADER\r\nUser-Agent: cpanel-dynamic-dns $VERSION\r\n\r\n\r\n"
         RESULT=`printf "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>&1`
         check_results_for_error "$RESULT" "$REQUEST"
     else
@@ -258,7 +284,7 @@ update_records () {
         fi
         say "Record %s%s. already exists in zone on line %d with address %s.   Updating to %s\n" "$SUBDOMAIN" "$DOMAIN" "$LINENUM" "$ADDRESS" "$MYADDRESS"
         LAST_CONNECT_HOST=$CPANEL_SERVER
-        REQUEST="GET /json-api/cpanel?cpanel_jsonapi_module=ZoneEdit&cpanel_jsonapi_func=edit_zone_record&cpanel_jsonapi_apiversion=2&Line=$FIRSTLINE&domain=$DOMAIN&name=$APINAME&type=A&address=$MYADDRESS&ttl=300 HTTP/1.0\r\nConnection: close\r\nAuthorization: Basic $AUTH_STRING\r\nUser-Agent: cpanel-dynamic-dns $VERSION\r\n\r\n\r\n"
+        REQUEST="GET /json-api/cpanel?cpanel_jsonapi_module=ZoneEdit&cpanel_jsonapi_func=edit_zone_record&cpanel_jsonapi_apiversion=2&Line=$FIRSTLINE&domain=$DOMAIN&name=$APINAME&type=A&address=$MYADDRESS&ttl=300 HTTP/1.0\r\nConnection: close\r\n$AUTH_HEADER\r\nUser-Agent: cpanel-dynamic-dns $VERSION\r\n\r\n\r\n"
         RESULT=`printf "$REQUEST" | openssl s_client -quiet -connect $CPANEL_SERVER:2083 2>&1`
         check_results_for_error "$RESULT" "$REQUEST"
     fi
@@ -377,19 +403,62 @@ check_config () {
         echo "= Error: DOMAIN must be set in a configuration file"
         exit
     fi
-    if [ "$CPANEL_USER" = "" ]; then
-        echo "= Error: CPANEL_USER must be set in a configuration file"
-        exit
+    
+    if [ "$CPANEL_API_TOKEN" = "" ]; then
+        # no token, but we still have other options
+        if [ "$CPANEL_AUTH_ENCODED" = "" ]; then
+            # may not be a problem but now we need a user and pass set
+            if [ "$CPANEL_USER" = "" ]; then
+                echo "= Error: CPANEL_USER (or CPANEL_AUTH_ENCODED or CPANEL_API_TOKEN) must be set in a configuration file"
+                exit
+            fi
+            if [ "$CPANEL_PASS" = "" ]; then
+                echo "= Error: CPANEL_PASS (or CPANEL_AUTH_ENCODED or CPANEL_API_TOKEN) must be set in a configuration file"
+                exit
+            fi
+        fi
+    else
+        # we have a token sand we also need a username
+        if [ "$CPANEL_USER" = "" ]; then
+            echo "= Error: CPANEL_USER must be set in a configuration file when using CPANEL_API_TOKEN"
+            exit
+        fi
     fi
-    if [ "$CPANEL_PASS" = "" ]; then
-        echo "= Error: CPANEL_PASS must be set in a configuration file"
-        exit
-    fi
+
     if ! perl -MJSON::PP -e1 >/dev/null 2>&1; then
         echo "= Error: A version of perl with JSON::PP must be in the PATH"
         exit
     fi
 }
+
+usage () {
+cat << EOT
+use CPanel API to update DNS records and therefore to use a cPanel & WHM server as a dynamic DNS provider
+
+Usage:
+   $0 [-h] [-f]
+
+where
+-h      shows this help
+-f      forces an update. Should only be used manually
+
+EOT
+exit 1
+}
+
+
+# ====================================== MAIN ============================================
+
+# Check for options
+while getopts hf OPT
+do
+   case $OPT in
+   f) FORCE_UPDATE=1;;
+   *) usage;;
+   esac
+done
+
+
 
 setup_vars
 setup_timeout
@@ -402,7 +471,7 @@ fetch_myaddress
 create_dirs
 load_last_run
 exit_if_last_address_is_current
-generate_auth_string
+generate_auth_header
 fetch_zone
 parse_zone
 update_records
