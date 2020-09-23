@@ -1,0 +1,53 @@
+# Config file for CPDYNDNS
+#
+# CONTACT_EMAIL is the email address that will be contacted upon failure
+#
+CONTACT_EMAIL=""
+
+#
+# DOMAIN and SUBDOMAIN are the domain that should get its A entry updated
+# SUBDOMAIN can be left blank if you wish to update the root domain
+#
+DOMAIN=""
+SUBDOMAIN=""
+
+#
+# CPANEL_SERVER is the hostname or ip address to connect to
+#
+CPANEL_SERVER=""
+
+#
+# CPANEL_USER and CPANEL_PASS are the username and password for your
+# cPanel Account
+# You don't need the CPANEL_USER OR CPANEL_PASS if using CPANEL_AUTH_ENCODED
+# You don't need the CPANEL_PASS if using CPANEL_API_TOKEN
+#
+CPANEL_USER=""
+CPANEL_PASS=""
+
+# optionally, instead of using CPANEL_USER and CPANEL_PASS, preencode these details from the command line using the following command
+# printf "%s:%s" "YOUR_CPANEL_USER" "YOUR_CPANEL_PASS" | openssl enc -base64
+# copy and paste the ouput of the above command into this config variable
+# if you use this configuration option, then CPANEL_USER and CPANEL_PASS will be ignored
+# this is not highly secure as it can still reveal the password but is slightly better than having the user and pass directly in a file
+CPANEL_AUTH_ENCODED=""
+
+
+#
+#  QUIET supresses all information messages (not errors)
+#  set to 0 or 1
+#
+QUIET=""
+
+
+#
+# API Token from 
+# https://documentation.cpanel.net/display/DD/Guide+to+cPanel+API+2
+# https://docs.cpanel.net/knowledge-base/security/how-to-use-cpanel-api-tokens/
+# Most secure authentication option as it does not reveal the password
+# if this is specified it replaces all other forms of authentication
+# you must still specify CPANEL_USER
+CPANEL_API_TOKEN=""
+
+
+
